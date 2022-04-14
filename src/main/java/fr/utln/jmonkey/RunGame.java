@@ -1,64 +1,54 @@
 package fr.utln.jmonkey;
 
-import com.jme3.animation.AnimChannel;
-import com.jme3.animation.AnimControl;
-import com.jme3.animation.AnimEventListener;
-import com.jme3.animation.LoopMode;
 import com.jme3.app.SimpleApplication;
 import com.jme3.input.KeyInput;
 import com.jme3.input.controls.ActionListener;
 import com.jme3.input.controls.KeyTrigger;
-import com.jme3.light.AmbientLight;
-import com.jme3.light.DirectionalLight;
 import com.jme3.material.Material;
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.Vector3f;
-import com.jme3.renderer.RenderManager;
 import com.jme3.scene.Geometry;
-import com.jme3.scene.Node;
 import com.jme3.scene.shape.Box;
 
 import java.util.Vector;
 
 /** Sample 7 - how to load an OgreXML model and play an animation,
  * using channels, a controller, and an AnimEventListener. */
-public class HelloWorld extends SimpleApplication {
-    Vector<snake> snake = new Vector<snake>();
-    Vector<food> food = new Vector<food>();
+public class RunGame extends SimpleApplication {
+    Vector<Snake> snake = new Vector<Snake>();
+    Vector<Food> food = new Vector<Food>();
     public static void main(String[] args) {
-        HelloWorld app = new HelloWorld();
+        RunGame app = new RunGame();
         app.start();
     }
 
     @Override
     public void simpleInitApp()
     {
+        /** initialisation de la map du jeu**/
         initMap();
 
+        /**fixer le point de vue en choisissant la location du camera**/
         cam.setLocation(new Vector3f(0, -300, 0));
         cam.lookAt(new Vector3f(0, 1, 0), Vector3f.UNIT_Y);
 
         inputManager.clearMappings();
 
-        snake.add(new snake(rootNode, assetManager));
-        snake.add(new snake(rootNode, assetManager));
-        snake.add(new snake(rootNode, assetManager));
-        /*
+        /**ajout des objets de Snake dans le vecteur**/
         snake.add(new Snake(rootNode, assetManager));
         snake.add(new Snake(rootNode, assetManager));
         snake.add(new Snake(rootNode, assetManager));
-        snake.add(new Snake(rootNode, assetManager));
-        snake.add(new Snake(rootNode, assetManager));
-        snake.add(new Snake(rootNode, assetManager));
-         *
-         */
+        
         lastTime = System.currentTimeMillis();
 
         initKeys();
-        food.add(new food(rootNode, assetManager));
+
+        /** ajout du l'objet food dans le vecteur**/
+        food.add(new Food(rootNode, assetManager));
 
     }
 
+    /**cette fonction permet de creer un Box utilise pour la map de ce jeu**/
     public void createBox(Vector3f pos, float x, float y , float z)
     {
         Box b = new Box(pos, x,y,z);
@@ -71,6 +61,7 @@ public class HelloWorld extends SimpleApplication {
         rootNode.attachChild(box);
     }
 
+    /** Cette fonction permet l'initialisation de la map **/
     public void initMap()
     {
         createBox(new Vector3f(100, 0, 0), 0, 100, 100);
@@ -83,6 +74,7 @@ public class HelloWorld extends SimpleApplication {
         createBox(new Vector3f(0, 0, -100), 100, 100, 0);
     }
 
+    /**Cette fonction permet de definir les touches qui seront utilisees pendant le jeu**/
     public void initKeys()
     {   inputManager.addMapping("quit", new KeyTrigger(KeyInput.KEY_ESCAPE));
         inputManager.addMapping("left", new KeyTrigger(keyInput.KEY_LEFT));
@@ -94,11 +86,12 @@ public class HelloWorld extends SimpleApplication {
 
         inputManager.addListener(action, "quit","left","right","up","down","top","bottom");
     }
-    public boolean quit, goLeft, goRight, goUp, goDown, goTop, goBottom;
+
+    public boolean quit, Left, Right, Up, Down, Top, Bottom;
 
     public void initControl()
     {
-        quit = goLeft = goRight = goUp = goDown = goTop = goBottom = false;
+        quit = Left = Right = Up = Down = Top = Bottom = false;
     }
 
     public ActionListener action = new ActionListener() {
@@ -110,27 +103,27 @@ public class HelloWorld extends SimpleApplication {
                 initControl();
                 if(name.equals("left"))
                 {
-                    goLeft = true;
+                    Left = true;
                 }
                 else if(name.equals("right"))
                 {
-                    goRight = true;
+                    Right = true;
                 }
                 else if(name.equals("up"))
                 {
-                    goUp = true;
+                    Up = true;
                 }
                 else if(name.equals("down"))
                 {
-                    goDown=true;
+                    Down=true;
                 }
                 else if(name.equals("top"))
                 {
-                    goTop=true;
+                    Top=true;
                 }
                 else if(name.equals("bottom"))
                 {
-                    goBottom = true;
+                    Bottom = true;
                 }
                 else if(name.equals("quit"))
                 {
@@ -142,71 +135,75 @@ public class HelloWorld extends SimpleApplication {
     };
 
     long lastTime,currTime;
-    boolean ismoving = false;
+
     @Override
     public void simpleUpdate(float tpf)
     {
-        DirectionalLight dl = new DirectionalLight();
-        dl.setColor(ColorRGBA.White);
-        dl.setDirection(new Vector3f(100, 100, 100).normalizeLocal());
-
-        AmbientLight al = new AmbientLight();
-        al.setColor(ColorRGBA.White.mult(1.3f));
-
+        food.firstElement().food.rotate(0, 2*tpf, 0);
         currTime = System.currentTimeMillis();
-
         if((currTime-lastTime) > 300)
         {
             for(int i = snake.size()-1 ; i>0 ; i--)
             {
                 snake.get(i).body.setLocalTranslation(snake.get(i-1).body.getLocalTranslation().clone());
-                snake.get(i).body.addLight(al);
             }
-
             lastTime = currTime;
-            snakeHeadMove();
+            snakeHeadMovement();
         }
         mapControl();
-        eatFood();
+        eat();
     }
 
-    public void eatFood()
+
+    /**Cette focntion permet de verifier quand l'objet snake va manger l'objet food**/
+    public void eat()
     {
-
-        if(snake.firstElement().body.getLocalTranslation().clone().distance(food.firstElement().pos)==0)
+        /** on verifie si la distance entre la tete de vecteur snake et le vecteur food est a 0**/
+        if(snake.firstElement().body.getLocalTranslation().clone().distance(food.firstElement().position)==0)
         {
-            snake.add(new snake(rootNode, assetManager));
+            /** on ajoute un objet snake dans le vecteur, on supprime le food et on ajoute un nouveau objet food*/
+            snake.add(new Snake(rootNode, assetManager));
             snake.lastElement().body.setLocalTranslation(snake.firstElement().body.getLocalTranslation());
-
             rootNode.detachChild(food.firstElement().food);
             food.clear();
-            food.add(new food(rootNode, assetManager));
+            food.add(new Food(rootNode, assetManager));
         }
     }
 
-    public void snakeHeadMove()
+    /**cette fonction permet le controle du mouvement de snake*/
+    public void snakeHeadMovement()
     {
-        if(goLeft)
-            snake.firstElement().snakeMove(new Vector3f(0, 0, -10));
-        else if(goRight)
-            snake.firstElement().snakeMove(new Vector3f(0, 0, 10));
-        else if(goUp)
-            snake.firstElement().snakeMove(new Vector3f(-10, 0, 0));
-        else if(goDown)
-            snake.firstElement().snakeMove(new Vector3f(10, 0, 0));
-        else if(goTop)
-            snake.firstElement().snakeMove(new Vector3f(0, -10, 0));
-        else if(goBottom)
-            snake.firstElement().snakeMove(new Vector3f(0, 10, 0));
+        if(Left) {
+            snake.firstElement().snakeMovement(new Vector3f(0, 0, -10));
+        }
+        else if(Right) {
+            snake.firstElement().snakeMovement(new Vector3f(0, 0, 10));
+        }
+        else if(Up) {
+            snake.firstElement().snakeMovement(new Vector3f(-10, 0, 0));
+        }
+        else if(Down) {
+            snake.firstElement().snakeMovement(new Vector3f(10, 0, 0));
+
+        }
+        else if(Top) {
+            snake.firstElement().snakeMovement(new Vector3f(0, -10, 0));
+        }
+        else if(Bottom) {
+            snake.firstElement().snakeMovement(new Vector3f(0, 10, 0));
+        }
     }
 
+    /**Cette fonction permet le controle de la map, par exemple si le snake depasse la box(map) d'un cote il apparait de l'autre cote**/
     public void mapControl()
     {
         Vector3f pos = snake.firstElement().body.getLocalTranslation();
+
         if(snake.firstElement().body.getLocalTranslation().clone().z > 100)
         {
             snake.firstElement().body.setLocalTranslation(pos.x, pos.y, -100);
         }
+
         if(snake.firstElement().body.getLocalTranslation().clone().z < -100)
         {
             snake.firstElement().body.setLocalTranslation(pos.x, pos.y, 100);
@@ -225,10 +222,11 @@ public class HelloWorld extends SimpleApplication {
         {
             snake.firstElement().body.setLocalTranslation(-100, pos.y, pos.z);
         }
+
         if(snake.firstElement().body.getLocalTranslation().clone().x < -100)
         {
             snake.firstElement().body.setLocalTranslation(100, pos.y, pos.z);
         }
-
     }
+
 }
